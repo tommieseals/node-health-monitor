@@ -1,0 +1,104 @@
+# Node Health Monitor - Homelab Configuration Example
+# A typical homelab setup with mixed platforms
+
+nodes:
+  # Primary server running VMs/containers
+  proxmox-host:
+    platform: linux
+    ssh:
+      username: root
+      host: 192.168.1.100
+    services:
+      - pveproxy
+      - qemu-ga
+    tags:
+      - hypervisor
+      - critical
+
+  # NAS for storage
+  truenas:
+    platform: linux
+    ssh:
+      username: root
+      host: 192.168.1.101
+    services:
+      - smbd
+      - nfsd
+    thresholds:
+      disk_warning: 70
+      disk_critical: 85
+    tags:
+      - storage
+      - critical
+
+  # Raspberry Pi running Home Assistant
+  homeassistant:
+    platform: linux
+    ssh:
+      username: pi
+      host: 192.168.1.102
+    services:
+      - home-assistant
+      - mosquitto
+    tags:
+      - iot
+      - automation
+
+  # Mac Mini for AI/ML workloads
+  mac-mini:
+    platform: darwin
+    ssh:
+      username: user
+      host: 192.168.1.103
+    services:
+      - ollama
+    thresholds:
+      memory_warning: 85
+      memory_critical: 95
+    tags:
+      - ai
+      - development
+
+  # Gaming/Windows PC
+  gaming-pc:
+    platform: windows
+    ssh:
+      username: gamer
+      host: 192.168.1.104
+    services:
+      - steam
+    tags:
+      - desktop
+
+  # The monitoring machine itself
+  monitor-host:
+    platform: linux
+    local: true
+    services:
+      - docker
+      - node-health-monitor
+    tags:
+      - monitoring
+
+thresholds:
+  memory_warning: 80
+  memory_critical: 90
+  disk_warning: 75
+  disk_critical: 90
+  load_warning: 4.0
+  load_critical: 8.0
+
+notifiers:
+  telegram:
+    enabled: true
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "${TELEGRAM_CHAT_ID}"
+
+dashboard:
+  enabled: true
+  port: 8080
+  refresh_interval: 30
+
+check_interval: 60
+parallel_checks: true
+log_level: INFO

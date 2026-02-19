@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Health Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        @keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); } }
+        @keyframes pulse-yellow { 0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(234, 179, 8, 0); } }
+        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } }
+        .status-healthy { animation: pulse-green 2s infinite; }
+        .status-warning { animation: pulse-yellow 2s infinite; }
+        .status-critical { animation: pulse-red 2s infinite; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-white">🖥️ Node Health Monitor</h1>
+                    <p class="text-gray-400 mt-1">Multi-platform server monitoring dashboard</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-400">Last updated</p>
+                    <p class="text-lg font-mono">{{ health.timestamp.strftime('%H:%M:%S') }}</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <!-- Overall Status -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm uppercase">Cluster Status</p>
+                        {% if health.status.value == 'healthy' %}
+                        <p class="text-2xl font-bold text-green-400">Healthy</p>
+                        {% elif health.status.value == 'warning' %}
+                        <p class="text-2xl font-bold text-yellow-400">Warning</p>
+                        {% else %}
+                        <p class="text-2xl font-bold text-red-400">Critical</p>
+                        {% endif %}
+                    </div>
+                    <div class="w-4 h-4 rounded-full 
+                        {% if health.status.value == 'healthy' %}bg-green-500 status-healthy
+                        {% elif health.status.value == 'warning' %}bg-yellow-500 status-warning
+                        {% else %}bg-red-500 status-critical{% endif %}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Nodes -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <p class="text-gray-400 text-sm uppercase">Total Nodes</p>
+                <p class="text-2xl font-bold">{{ health.nodes | length }}</p>
+            </div>
+
+            <!-- Healthy Nodes -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <p class="text-gray-400 text-sm uppercase">Healthy</p>
+                <p class="text-2xl font-bold text-green-400">{{ health.healthy_count }}</p>
+            </div>
+
+            <!-- Alerts -->
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <p class="text-gray-400 text-sm uppercase">Active Alerts</p>
+                <p class="text-2xl font-bold {% if health.get_all_alerts() %}text-red-400{% else %}text-gray-400{% endif %}">
+                    {{ health.get_all_alerts() | length }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Nodes Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for node in health.nodes %}
+            <div class="bg-gray-800 rounded-lg border 
+                {% if node.status.value == 'healthy' %}border-green-500/30
+                {% elif node.status.value == 'warning' %}border-yellow-500/30
+                {% else %}border-red-500/30{% endif %}
+                overflow-hidden">
+                
+                <!-- Node Header -->
+                <div class="px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold">{{ node.name }}</h3>
+                        <p class="text-sm text-gray-400">{{ node.host }} • {{ node.platform }}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-1 rounded-full
+                            {% if node.status.value == 'healthy' %}bg-green-500/20 text-green-400
+                            {% elif node.status.value == 'warning' %}bg-yellow-500/20 text-yellow-400
+                            {% else %}bg-red-500/20 text-red-400{% endif %}">
+                            {{ node.status.value | upper }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if node.reachable %}
+                <!-- Metrics -->
+                <div class="px-6 py-4 space-y-4">
+                    <!-- Memory -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-400">Memory</span>
+                            <span class="{% if node.memory_percent > 90 %}text-red-400{% elif node.memory_percent > 80 %}text-yellow-400{% else %}text-gray-300{% endif %}">
+                                {{ "%.1f"|format(node.memory_percent) }}%
+                            </span>
+                        </div>
+                        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full transition-all duration-500
+                                {% if node.memory_percent > 90 %}bg-red-500
+                                {% elif node.memory_percent > 80 %}bg-yellow-500
+                                {% else %}bg-green-500{% endif %}"
+                                style="width: {{ node.memory_percent }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Disk -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-400">Disk</span>
+                            <span class="{% if node.disk_percent > 90 %}text-red-400{% elif node.disk_percent > 80 %}text-yellow-400{% else %}text-gray-300{% endif %}">
+                                {{ "%.1f"|format(node.disk_percent) }}%
+                            </span>
+                        </div>
+                        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full transition-all duration-500
+                                {% if node.disk_percent > 90 %}bg-red-500
+                                {% elif node.disk_percent > 80 %}bg-yellow-500
+                                {% else %}bg-green-500{% endif %}"
+                                style="width: {{ node.disk_percent }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Load -->
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-400">Load (1m)</span>
+                            <span class="text-gray-300">{{ "%.2f"|format(node.load_average[0]) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Services -->
+                    {% if node.services %}
+                    <div class="pt-2 border-t border-gray-700">
+                        <p class="text-sm text-gray-400 mb-2">Services</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for svc in node.services %}
+                            <span class="text-xs px-2 py-1 rounded-full flex items-center gap-1
+                                {% if svc.running %}bg-green-500/20 text-green-400
+                                {% else %}bg-red-500/20 text-red-400{% endif %}">
+                                {% if svc.running %}✓{% else %}✗{% endif %} {{ svc.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <!-- Unreachable -->
+                <div class="px-6 py-8 text-center">
+                    <p class="text-red-400 text-lg">❌ Unreachable</p>
+                    <p class="text-gray-500 text-sm mt-2">{{ node.error_message or 'Connection failed' }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Alerts Section -->
+        {% if health.get_all_alerts() %}
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold mb-4">🚨 Active Alerts</h2>
+            <div class="bg-red-900/20 border border-red-500/30 rounded-lg divide-y divide-red-500/20">
+                {% for node_name, message in health.get_all_alerts() %}
+                <div class="px-6 py-3 flex items-center gap-4">
+                    <span class="font-mono text-red-400">{{ node_name }}</span>
+                    <span class="text-gray-300">{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-8 border-t border-gray-800 text-center text-gray-500 text-sm">
+            <p>Node Health Monitor v1.0.0 • Auto-refreshes every {{ config.dashboard.refresh_interval }}s</p>
+        </footer>
+    </div>
+
+    <!-- Auto-refresh -->
+    <script>
+        setTimeout(() => location.reload(), {{ config.dashboard.refresh_interval * 1000 }});
+    </script>
+</body>
+</html>
