@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "node-health-monitor"
+version = "1.1.0"
+description = "Multi-platform server health monitoring with alerts and auto-remediation"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Tommie Seals"}
+]
+keywords = [
+    "monitoring", "health-check", "server", "infrastructure", 
+    "devops", "ssh", "alerts", "dashboard"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+]
+# The code uses PEP 604 unions (e.g. `int | None`) in dataclass fields,
+# which are evaluated at runtime, so 3.10 is the real floor.
+requires-python = ">=3.10"
+dependencies = [
+    "paramiko>=3.0.0",
+    "pyyaml>=6.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "jinja2>=3.0.0",
+    "httpx>=0.24.0",
+    "psutil>=5.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+nhm = "node_health_monitor.cli:main"
+node-health-monitor = "node_health_monitor.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/tommieseals/node-health-monitor"
+Documentation = "https://github.com/tommieseals/node-health-monitor#readme"
+Repository = "https://github.com/tommieseals/node-health-monitor.git"
+Issues = "https://github.com/tommieseals/node-health-monitor/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true

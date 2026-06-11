@@ -1,0 +1,13 @@
+# Runtime dependencies — kept in sync with [project].dependencies in pyproject.toml
+# and with the actual imports in src/node_health_monitor/.
+paramiko>=3.0.0     # collectors/ssh.py
+pyyaml>=6.0         # config.py
+click>=8.0.0        # cli.py
+rich>=13.0.0        # cli.py
+fastapi>=0.100.0    # dashboard/app.py
+uvicorn>=0.23.0     # cli.py (dashboard command)
+jinja2>=3.0.0       # dashboard/app.py (Jinja2Templates)
+httpx>=0.24.0       # notifiers/
+psutil>=5.9.0       # collectors/local.py
+
+# Test/dev dependencies live in pyproject.toml: pip install -e ".[dev]"
